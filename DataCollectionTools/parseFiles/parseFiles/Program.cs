@@ -21,10 +21,14 @@ namespace parseFiles
             List<UnitQuaternion> orientations = new List<UnitQuaternion>();
             while (excelReader.Read())
             {
-                double yaw = excelReader.GetDouble(0) - 90.0;
+                double yaw = excelReader.GetDouble(0);
                 double roll = excelReader.GetDouble(1);
                 double pitch = (excelReader.GetDouble(2) + 90.0) * -1.0;
                 string timeString = excelReader.GetString(3);
+
+                NormalizeAngle(ref yaw);
+                NormalizeAngle(ref pitch);
+                NormalizeAngle(ref roll);
 
                 DateTime time = DateTime.ParseExact(timeString, "yyyy-M-dd HH:mm:ss:fff", CultureInfo.InvariantCulture);
                 time = time.ToUniversalTime();
@@ -80,7 +84,7 @@ namespace parseFiles
 
             OrientationCesiumWriter orientationWriter = packetWriter.OpenOrientationProperty();
             orientationWriter.WriteInterpolationAlgorithm(CesiumInterpolationAlgorithm.Linear);
-            orientationWriter.WriteInterpolationDegree(3);
+            orientationWriter.WriteInterpolationDegree(1);
             orientationWriter.WriteUnitQuaternion(orientationTimes, orientations);
 
             orientationWriter.Close();
@@ -107,6 +111,19 @@ namespace parseFiles
             
         }
 
+        public static void NormalizeAngle(ref double angleDegrees)
+        {
+            if (angleDegrees > 180.0)
+            {
+                angleDegrees -= 360.0;
+            }
+
+            else if (angleDegrees < -180.0)
+            {
+                angleDegrees += 360.0;
+            }
+        }
+
         public static UnitQuaternion ToQuaternionNew(double yaw, double pitch, double roll)
         {
             yaw = deg2Rad(yaw);
@@ -119,12 +136,11 @@ namespace parseFiles
             double s2 = Math.Sin(pitch / 2);
             double c3 = Math.Cos(roll / 2);
             double s3 = Math.Sin(roll / 2);
-            double c1c2 = c1 * c2;
-            double s1s2 = s1 * s2;
-            double w = c1c2 * c3 - s1s2 * s3;
-            double x = c1c2 * s3 + s1s2 * c3;
-            double y = s1 * c2 * c3 + c1 * s2 * s3;
-            double z = c1 * s2 * c3 - s1 * c2 * s3;
+
+            double w = (c1 * c2 * c3) - (s1 * s2 * s3);
+            double x = (c1 * c2 * s3) + (s1 * s2 * c3);
+            double z = (s1 * c2 * c3) + (c1 * s2 * s3);
+            double y = (c1 * s2 * c3) - (s1 * c2 * s3);
 
             return new UnitQuaternion(w, x, y, z);
         }
