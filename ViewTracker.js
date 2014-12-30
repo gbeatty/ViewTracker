@@ -24,11 +24,11 @@ function flyToObject(scene, entity) {
     entityView.update(time);
 
     var objectPosition = entity.position.getValue(time);
-    var cameraOffset = new Cesium.Cartesian3(0, -1000, 100);
+    var cameraOffset = new Cesium.Cartesian3(-1.0, 0, 0);
     var direction = new Cesium.Cartesian3();
     Cesium.Cartesian3.negate(Cesium.Cartesian3.normalize(cameraOffset, direction), direction);
 
-    var up = new Cartesian3();
+    var up = new Cesium.Cartesian3();
     Cesium.Cartesian3.cross(direction, objectPosition, up);
     Cesium.Cartesian3.cross(up, direction, up);
     Cesium.Cartesian3.normalize(up, up);
@@ -40,7 +40,7 @@ function flyToObject(scene, entity) {
         destination : destination,
         direction : direction,
         up : up,
-        duration : 12.0,
+        duration : 2.0,
         complete : function() {
             enableInput(scene);
         }
@@ -176,8 +176,8 @@ function updateData() {
     var orientation = cameraOrientaionObject.orientation.getValue(clock.currentTime);
     var rotation = Cesium.Matrix3.fromQuaternion(orientation, scratchMatrix);
     
-    var toVector = Cesium.Cartesian3.UNIT_Y.clone();
-    var upVector = Cesium.Cartesian3.UNIT_Z.clone();
+    var toVector = new Cesium.Cartesian3(0, 0, 1);
+    var upVector = new Cesium.Cartesian3(0, -1, 0);
     
     Cesium.Matrix3.multiplyByVector(rotation, toVector, toVector);
     Cesium.Matrix3.multiplyByVector(rotation, upVector, upVector);
@@ -209,6 +209,8 @@ function setTimeFromBuffer(entityCollection) {
 
     animationWidget.viewModel.startTime = clock.startTime;
     animationWidget.viewModel.stopTime = clock.stopTime;
+    
+    clock.tick();
 }
 
 
@@ -216,6 +218,7 @@ var timelineWidget;
 var animationWidget;
 var cesiumWidget;
 var cameraOrientaionObject;
+var cameraPositionObject;
 $( document ).ready(function() {
     setLoading(true);
 
@@ -283,7 +286,7 @@ $( document ).ready(function() {
 
 
 
-    var orientationCzml = "Gallery/orientation.czml";
+    var orientationCzml = "Gallery/TestOrientation.czml";
 
     // load orientation czml
     var orientationCzmlDataSource = new Cesium.CzmlDataSource();
@@ -296,6 +299,9 @@ $( document ).ready(function() {
         cesiumWidget.clock.shouldAnimate = false;
         
         cameraOrientaionObject = entityCollection.getById("CameraOrientation");
+        cameraPositionObject = entityCollection.getById("CameraPosition");
+        
+        flyToObject(cesiumWidget.scene, cameraPositionObject);
         
         setLoading(false);
 

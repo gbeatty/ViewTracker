@@ -13,11 +13,11 @@ namespace parseFiles
     {
         static void Main(string[] args)
         {
-
-            FileStream stream = File.Open("G:/skiView/Sensor_record_20141229_025126.xlsx", FileMode.Open, FileAccess.Read);
+            // read orientation data
+            FileStream stream = File.Open("D:/Cesium/ViewTracker/DataCollectionTools/Sensor_record_20141229_235105_AndroSensor.xlsx", FileMode.Open, FileAccess.Read);
             IExcelDataReader excelReader = ExcelReaderFactory.CreateOpenXmlReader(stream);
 
-            List<JulianDate> times = new List<JulianDate>();
+            List<JulianDate> orientationTimes = new List<JulianDate>();
             List<UnitQuaternion> orientations = new List<UnitQuaternion>();
             while (excelReader.Read())
             {
@@ -27,19 +27,40 @@ namespace parseFiles
                 string timeString = excelReader.GetString(3);
 
                 DateTime time = DateTime.ParseExact(timeString, "yyyy-M-dd HH:mm:ss:fff", CultureInfo.InvariantCulture);
+                time = time.ToUniversalTime();
 
-
-                times.Add(new JulianDate(time));
-                orientations.Add(ToQuaternion(yaw, pitch, roll));
+                orientationTimes.Add(new JulianDate(time));
+                orientations.Add(ToQuaternionNew(yaw, pitch, roll));
             }
 
             excelReader.Close();
 
 
 
+            // read gps data
+            stream = File.Open("D:/Cesium/ViewTracker/DataCollectionTools/TestTrack.xlsx", FileMode.Open, FileAccess.Read);
+            excelReader = ExcelReaderFactory.CreateOpenXmlReader(stream);
+            List<Cartographic> gpsPositions = new List<Cartographic>();
+            List<JulianDate> gpsTimes = new List<JulianDate>();
+            while (excelReader.Read())
+            {
+                double latitude = deg2Rad(excelReader.GetDouble(0));
+                double longitude = deg2Rad(excelReader.GetDouble(1));
+                double altitude = excelReader.GetDouble(2);
+                string timeString = excelReader.GetString(3);
+
+                DateTime time = DateTime.Parse(timeString, CultureInfo.InvariantCulture);
+                time = time.ToUniversalTime();
+
+                gpsTimes.Add(new JulianDate(time));
+                gpsPositions.Add(new Cartographic(longitude, latitude, altitude));
+            }
+
+            excelReader.Close();
 
 
-            System.IO.TextWriter textWriter = System.IO.File.CreateText("G:/skiView/orientation.czml");
+
+            System.IO.TextWriter textWriter = System.IO.File.CreateText("D:/Cesium/ViewTracker/Gallery/TestOrientation.czml");
             CesiumOutputStream output = new CesiumOutputStream(textWriter);
             output.PrettyFormatting = true;
             output.WriteStartSequence();
@@ -52,23 +73,60 @@ namespace parseFiles
             packetWriter.WriteName("orientation");
             packetWriter.Close();
 
+            // write orientation
             packetWriter = cesiumWriter.OpenPacket(output);
             packetWriter.WriteId("CameraOrientation");
-            packetWriter.WriteAvailability(times[0], times[times.Count - 1]);
-
+            packetWriter.WriteAvailability(orientationTimes[0], orientationTimes[orientationTimes.Count - 1]);
 
             OrientationCesiumWriter orientationWriter = packetWriter.OpenOrientationProperty();
             orientationWriter.WriteInterpolationAlgorithm(CesiumInterpolationAlgorithm.Linear);
             orientationWriter.WriteInterpolationDegree(3);
-            orientationWriter.WriteUnitQuaternion(times, orientations);
+            orientationWriter.WriteUnitQuaternion(orientationTimes, orientations);
 
             orientationWriter.Close();
+            packetWriter.Close();
+
+
+
+            // write gps positions as a path
+            packetWriter = cesiumWriter.OpenPacket(output);
+            packetWriter.WriteId("CameraPosition");
+            packetWriter.WriteAvailability(gpsTimes[0], gpsTimes[gpsTimes.Count - 1]);
+
+            PathCesiumWriter pathWriter = packetWriter.OpenPathProperty();
+            pathWriter.WriteWidthProperty(5.0);
+            pathWriter.Close();
+
+            packetWriter.WritePositionPropertyCartographicRadians(gpsTimes, gpsPositions);
+
             packetWriter.Close();
 
             output.WriteEndSequence();
             textWriter.Close();
 
             
+        }
+
+        public static UnitQuaternion ToQuaternionNew(double yaw, double pitch, double roll)
+        {
+            yaw = deg2Rad(yaw);
+            pitch = deg2Rad(pitch);
+            roll = deg2Rad(roll);
+
+            double c1 = Math.Cos(yaw / 2);
+            double s1 = Math.Sin(yaw / 2);
+            double c2 = Math.Cos(pitch / 2);
+            double s2 = Math.Sin(pitch / 2);
+            double c3 = Math.Cos(roll / 2);
+            double s3 = Math.Sin(roll / 2);
+            double c1c2 = c1 * c2;
+            double s1s2 = s1 * s2;
+            double w = c1c2 * c3 - s1s2 * s3;
+            double x = c1c2 * s3 + s1s2 * c3;
+            double y = s1 * c2 * c3 + c1 * s2 * s3;
+            double z = c1 * s2 * c3 - s1 * c2 * s3;
+
+            return new UnitQuaternion(w, x, y, z);
         }
 
         public static UnitQuaternion ToQuaternion(double yaw, double pitch, double roll)
@@ -96,7 +154,7 @@ namespace parseFiles
 
         public static double deg2Rad(double degrees)
         {
-            return Math.PI / 180 * degrees;
+            return Math.PI / 180.0 * degrees;
         }
     }
 }
