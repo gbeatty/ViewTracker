@@ -175,7 +175,6 @@ function updateData() {
     
     var orientation = cameraOrientaionObject.orientation.getValue(clock.currentTime);
     var rotation = Cesium.Matrix3.fromQuaternion(orientation, scratchMatrix);
-    Cesium.Matrix3.inverse(rotation, rotation);
     
     var toVector = new Cesium.Cartesian3(1, 0, 0);
     var upVector = new Cesium.Cartesian3(0, 0, 1);

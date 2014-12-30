@@ -21,7 +21,7 @@ namespace parseFiles
             List<UnitQuaternion> orientations = new List<UnitQuaternion>();
             while (excelReader.Read())
             {
-                double yaw = excelReader.GetDouble(0);
+                double yaw = excelReader.GetDouble(0) * -1.0;
                 double roll = excelReader.GetDouble(1);
                 double pitch = (excelReader.GetDouble(2) + 90.0) * -1.0;
                 string timeString = excelReader.GetString(3);
@@ -84,7 +84,7 @@ namespace parseFiles
 
             OrientationCesiumWriter orientationWriter = packetWriter.OpenOrientationProperty();
             orientationWriter.WriteInterpolationAlgorithm(CesiumInterpolationAlgorithm.Linear);
-            orientationWriter.WriteInterpolationDegree(1);
+            orientationWriter.WriteInterpolationDegree(5);
             orientationWriter.WriteUnitQuaternion(orientationTimes, orientations);
 
             orientationWriter.Close();
