@@ -1,5 +1,6 @@
 ﻿using CesiumLanguageWriter;
 using Excel;
+using Shell32;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -62,6 +63,21 @@ namespace parseFiles
 
             excelReader.Close();
 
+            
+            // read video data
+            FileInfo fileInfo = new FileInfo("D:/Cesium/ViewTracker/DataCollectionTools/2014-12-29 23-50-35.mp4");
+            string videoName = fileInfo.Name;
+            string videoTimeString = fileInfo.Name.Substring(0, 19);
+            DateTime videoTime = DateTime.ParseExact(videoTimeString, "yyyy-M-dd HH-mm-ss", CultureInfo.InvariantCulture);
+            videoTime = videoTime.AddSeconds(1.9); // add a few seconds because file is created a few seconds before the video actually starts
+            videoTime = videoTime.ToUniversalTime();
+
+            double duration = GetVideoDuration(fileInfo);
+            JulianDate videoStartTime = new JulianDate(videoTime);
+            JulianDate videoEndTime = videoStartTime.AddSeconds(duration);
+
+
+
 
 
             System.IO.TextWriter textWriter = System.IO.File.CreateText("D:/Cesium/ViewTracker/Gallery/TestOrientation.czml");
@@ -69,46 +85,71 @@ namespace parseFiles
             output.PrettyFormatting = true;
             output.WriteStartSequence();
               
-            CesiumStreamWriter cesiumWriter = new CesiumStreamWriter();
+                CesiumStreamWriter cesiumWriter = new CesiumStreamWriter();
 
-            PacketCesiumWriter packetWriter = cesiumWriter.OpenPacket(output);
-            packetWriter.WriteId("document");
-            packetWriter.WriteVersion("1.0");
-            packetWriter.WriteName("orientation");
-            packetWriter.Close();
+                PacketCesiumWriter packetWriter = cesiumWriter.OpenPacket(output);
+                    packetWriter.WriteId("document");
+                    packetWriter.WriteVersion("1.0");
+                    packetWriter.WriteName("orientation");
+                packetWriter.Close();
 
-            // write orientation
-            packetWriter = cesiumWriter.OpenPacket(output);
-            packetWriter.WriteId("CameraOrientation");
-            packetWriter.WriteAvailability(orientationTimes[0], orientationTimes[orientationTimes.Count - 1]);
+                // write orientation
+                packetWriter = cesiumWriter.OpenPacket(output);
+                    packetWriter.WriteId("CameraOrientation");
+                    packetWriter.WriteAvailability(orientationTimes[0], orientationTimes[orientationTimes.Count - 1]);
 
-            OrientationCesiumWriter orientationWriter = packetWriter.OpenOrientationProperty();
-            orientationWriter.WriteInterpolationAlgorithm(CesiumInterpolationAlgorithm.Linear);
-            orientationWriter.WriteInterpolationDegree(5);
-            orientationWriter.WriteUnitQuaternion(orientationTimes, orientations);
-
-            orientationWriter.Close();
-            packetWriter.Close();
-
+                    OrientationCesiumWriter orientationWriter = packetWriter.OpenOrientationProperty();
+                        orientationWriter.WriteInterpolationAlgorithm(CesiumInterpolationAlgorithm.Linear);
+                        orientationWriter.WriteInterpolationDegree(5);
+                        orientationWriter.WriteUnitQuaternion(orientationTimes, orientations);
+                    orientationWriter.Close();
+                packetWriter.Close();
 
 
-            // write gps positions as a path
-            packetWriter = cesiumWriter.OpenPacket(output);
-            packetWriter.WriteId("CameraPosition");
-            packetWriter.WriteAvailability(gpsTimes[0], gpsTimes[gpsTimes.Count - 1]);
 
-            PathCesiumWriter pathWriter = packetWriter.OpenPathProperty();
-            pathWriter.WriteWidthProperty(5.0);
-            pathWriter.Close();
+                // write gps positions as a path
+                packetWriter = cesiumWriter.OpenPacket(output);
+                    packetWriter.WriteId("CameraPosition");
+                    packetWriter.WriteAvailability(gpsTimes[0], gpsTimes[gpsTimes.Count - 1]);
 
-            packetWriter.WritePositionPropertyCartographicRadians(gpsTimes, gpsPositions);
+                    PathCesiumWriter pathWriter = packetWriter.OpenPathProperty();
+                        pathWriter.WriteWidthProperty(5.0);
+                    pathWriter.Close();
 
-            packetWriter.Close();
+                    packetWriter.WritePositionPropertyCartographicRadians(gpsTimes, gpsPositions);
+                packetWriter.Close();
 
-            output.WriteEndSequence();
+
+                // write video info
+                packetWriter = cesiumWriter.OpenPacket(output);
+                    packetWriter.WriteId("VideoInfo");
+                    packetWriter.WriteName(videoName);
+                    packetWriter.WriteAvailability(videoStartTime, videoEndTime);
+                packetWriter.Close();
+                
+
+                output.WriteEndSequence();
             textWriter.Close();
 
             
+        }
+
+        public static double GetVideoDuration(FileInfo fi)
+        {
+            Dictionary<string, string> ret = new Dictionary<string, string>();
+            Shell shl = new Shell();
+            Folder folder = shl.NameSpace(fi.DirectoryName);
+            FolderItem item = folder.ParseName(fi.Name);
+
+            string lengthString = folder.GetDetailsOf(item, 27); // "length" is index 27
+            string[] lengthSplit = lengthString.Split(':');
+
+            double h = Double.Parse(lengthSplit[0]);
+            double m = Double.Parse(lengthSplit[1]);
+            double s = Double.Parse(lengthSplit[2]);
+
+            s = s + (m * 60) + (h * 60 * 60);
+            return s;
         }
 
         public static void NormalizeAngle(ref double angleDegrees)

@@ -71,10 +71,6 @@ body {
     height: 26px;
 }
 
-.skiTracks-errorDialog {
-    position: absolute;
-}
-
 .social-buttons {
     position: absolute;
     top: 10px;
@@ -105,6 +101,14 @@ body {
     padding: 0;
     width: 169px;
     height: 112px;
+}
+
+.viewTracker-videoOverlayContainer {
+    position: absolute;   
+    top: 25%;
+    left: 25%;
+    width="320px";
+    height="240px";
 }
 
 .cesium-widget-credits {

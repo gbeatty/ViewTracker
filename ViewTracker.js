@@ -24,7 +24,7 @@ function flyToObject(scene, entity) {
     entityView.update(time);
 
     var objectPosition = entity.position.getValue(time);
-    var cameraOffset = new Cesium.Cartesian3(-1.0, 0, 0);
+    var cameraOffset = new Cesium.Cartesian3(-1.0, 0, 25.0);
     var direction = new Cesium.Cartesian3();
     Cesium.Cartesian3.negate(Cesium.Cartesian3.normalize(cameraOffset, direction), direction);
 
@@ -186,22 +186,33 @@ function updateData() {
     Cesium.Cartesian3.add(cesiumWidget.scene.camera.position, toVector, lookToPosition);
     
     cesiumWidget.scene.camera.lookAt(cesiumWidget.scene.camera.position, lookToPosition, upVector);
+    
+    syncVideo();
 }
 
-function setTimeFromBuffer(entityCollection) {
+function setTimeFromBuffer() {
 
     var clock = cesiumWidget.clock;
-
-    var availability = entityCollection.computeAvailability();
-    if (availability.start.equals(Cesium.Iso8601.MINIMUM_VALUE)) {
-        clock.startTime = new Cesium.JulianDate();
-        clock.stopTime = Cesium.JulianDate.addDays(clock.startTime, 1, clock.stopTime);
-        clock.clockRange = Cesium.ClockRange.UNBOUNDED;
-        clock.multiplier = 60.0;
-    } else {
-        clock.startTime = availability.start;
-        clock.stopTime = availability.stop;
+    
+    var startTime = cameraOrientaionObject.availability.start;
+    if(Cesium.JulianDate.greaterThan(cameraPositionObject.availability.start, startTime)) {
+    	startTime = cameraPositionObject.availability.start;
     }
+    if(Cesium.JulianDate.greaterThan(videoInfoObject.availability.start, startTime)) {
+    	startTime = videoInfoObject.availability.start;
+    }
+    
+    var stopTime = cameraOrientaionObject.availability.stop;
+    if(Cesium.JulianDate.lessThan(cameraPositionObject.availability.stop, stopTime)) {
+    	stopTime = cameraPositionObject.availability.stop;
+    }
+    if(Cesium.JulianDate.lessThan(videoInfoObject.availability.stop, stopTime)) {
+    	stopTime = videoInfoObject.availability.stop;
+    }
+
+
+    clock.startTime = startTime;
+    clock.stopTime = stopTime;
 
     clock.currentTime = clock.startTime;
     clock.clockStep = Cesium.ClockStep.SYSTEM_CLOCK_MULTIPLIER;
@@ -214,11 +225,91 @@ function setTimeFromBuffer(entityCollection) {
 }
 
 
+//custom video events that will bubble up the dom tree
+var videoLoadingEvent = document.createEvent("Event");
+videoLoadingEvent.initEvent("videoLoading",true,true);
+
+var videoLoadedEvent = document.createEvent("Event");
+videoLoadedEvent.initEvent("videoLoaded",true,true);
+
+var triggerVideoLoadingEvent = function(evt) {
+    //evt.target.dispatchEvent(videoLoadingEvent);
+};
+
+var triggerVideoLoadedEvent = function(evt) {
+    //evt.target.dispatchEvent(videoLoadedEvent);
+};
+
+
+var previousTime = 'undefined';
+var previousSystemTime = 'undefined';
+function syncVideo() {
+	
+	var currentAnimationTime = cesiumWidget.clock.currentTime;
+	var currentSystemTime = new Date().getTime();
+    if(videoLoaded && previousTime !== 'undefined' && previousSystemTime !== 'undefined') {
+
+        var deltaAnimationTime = Cesium.JulianDate.secondsDifference(currentAnimationTime, previousTime);
+        var deltaSystemTime = (currentSystemTime-previousSystemTime) / 1000.0;
+        var animationRate = deltaAnimationTime / deltaSystemTime;
+        
+        
+        var playbackRate = (animationRate * cesiumWidget.clock.multiplier).toFixed(2);
+        if(playbackRate < 0) {
+            // browsers don't handle negative playback rates
+        	html5VideoElement.playbackRate = 0;
+        }
+        else if(html5VideoElement.playbackRate.toFixed(2) !== playbackRate) {
+        	html5VideoElement.playbackRate = playbackRate;
+        }
+
+        if(html5VideoElement.paused) {
+        	html5VideoElement.play();
+        }
+
+        var duration = html5VideoElement.duration;
+        //TODO: We should probably be checking the video.seekable segments
+        //before setting the currentTime, but if there are no seekable
+        //segments, then this code will have no affect, so the net result
+        //seems to be the same.
+        var availability = videoInfoObject.availability;
+        var startTime = availability.start;        
+        var videoTime = Cesium.JulianDate.secondsDifference(currentAnimationTime, startTime);
+
+        if (videoTime > duration) {
+            videoTime = duration;
+        } else if (videoTime < 0.0) {
+            videoTime = 0.0;
+        }
+
+        // seek to correct time if video has gotten out of sync
+        if( Math.abs(videoTime - html5VideoElement.currentTime) > 0.2 ) {
+        	html5VideoElement.currentTime = videoTime;
+        }
+
+        // set a timer to stop the video if the video material isn't being accessed
+        window.clearTimeout(html5VideoElement.timeoutId);
+        html5VideoElement.timeoutId = window.setTimeout(
+                function () {
+                	html5VideoElement.pause();
+                }, 300);
+    }
+    
+    previousSystemTime = currentSystemTime;
+    previousTime = currentAnimationTime;
+}
+
+
+
+
 var timelineWidget;
 var animationWidget;
 var cesiumWidget;
 var cameraOrientaionObject;
 var cameraPositionObject;
+var html5VideoElement;
+var videoInfoObject;
+var videoLoaded = false;
 $( document ).ready(function() {
     setLoading(true);
 
@@ -294,16 +385,46 @@ $( document ).ready(function() {
 
         var entityCollection =  orientationCzmlDataSource.entities;
         
-       
-        setTimeFromBuffer(entityCollection);
-        cesiumWidget.clock.shouldAnimate = false;
-        
         cameraOrientaionObject = entityCollection.getById("CameraOrientation");
         cameraPositionObject = entityCollection.getById("CameraPosition");
+        videoInfoObject = entityCollection.getById("VideoInfo");
         
+       
+        setTimeFromBuffer();
+        cesiumWidget.clock.shouldAnimate = false;
+
         flyToObject(cesiumWidget.scene, cameraPositionObject);
         
-        setLoading(false);
+        // load video
+        html5VideoElement = document.getElementById("videoOverlayContainer");
+
+        //html5VideoElement.addEventListener("waiting", triggerVideoLoadingEvent, false);
+
+        //html5VideoElement.addEventListener("playing", triggerVideoLoadedEvent, false);
+
+        var that = this;
+        html5VideoElement.addEventListener("canplaythrough", function() {
+
+        	html5VideoElement.playbackRate = 0.0; // let the sync function control playback rate
+        	html5VideoElement.play();
+
+            //html5VideoElement.dispatchEvent(videoLoadedEvent);
+            videoLoaded = true;
+            setLoading(false);
+        }, false);
+
+        //html5VideoElement.dispatchEvent(videoLoadingEvent);
+        html5VideoElement.preload = 'auto';
+        html5VideoElement.playbackRate = 1.0;
+        html5VideoElement.loop = true;
+        //html5VideoElement.muted = true;
+        html5VideoElement.src = "Gallery/" + videoInfoObject.name;
+        html5VideoElement.load();
+        
+        //setLoading(false);
 
     });
+    
+    
+    
 });
