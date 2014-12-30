@@ -1,0 +1,113 @@
+@import url('Cesium/Widgets/widgets.css');
+
+body {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	overflow: hidden;
+	padding: 0;
+	margin: 0;
+    font-family: sans-serif;
+}
+
+.fullscreenContainer {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    padding: 0;
+    width: 29px;
+    height: 29px;
+    overflow: hidden;
+}
+
+.fullWindow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    overflow: hidden;
+    padding: 0;
+}
+
+.viewTracker-loading {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -33px;
+    margin-left: -33px;
+    width: 66px;
+    height: 66px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-image: url(Gallery/ajax-loader.gif);
+}
+
+.chrome-logo  {
+    display: block;
+    width: 90px;
+    height: 35px;
+    background: url('Gallery/Icons/chrome_logo_2x.png');
+    background-size: 100% 100%;
+}
+
+.help-icon  {
+    display: block;
+    width: auto;
+    height: 200px;
+    background: url('Gallery/Icons/headsup_1.png');
+    background-size: 100% 100%;
+}
+
+.cesium-widget-logo {
+    bottom: 35px;
+    left: 170px;
+    text-decoration: none;
+    width: 118px;
+    height: 26px;
+}
+
+.skiTracks-errorDialog {
+    position: absolute;
+}
+
+.social-buttons {
+    position: absolute;
+    top: 10px;
+    right: 210px;
+    horizontal
+}
+
+.social-button-inline {
+    display: inline-block;
+}
+
+.viewTracker-timelineContainer {
+    position: absolute;
+    bottom: 0;
+    left: 169px;
+    right: 5px;
+    height: 27px;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    font-size: 14px;
+}
+
+.viewTracker-animationContainer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    padding: 0;
+    width: 169px;
+    height: 112px;
+}
+
+.cesium-widget-credits {
+    bottom: 30px;
+    left: 174px;
+}

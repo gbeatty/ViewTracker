@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>View Tracker</title>
+    <script src="CesiumUnminified/Cesium.js"></script>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+	<link rel="stylesheet" href="ViewTracker.css" media="screen">
+	<link rel="stylesheet" href="jquery-ui-1.10.2.custom/css/dark-hive/jquery-ui-1.10.2.custom.css">
+	
+	<script src="jquery-ui-1.10.2.custom/js/jquery-1.9.1.js"></script>
+	<script src="jquery-ui-1.10.2.custom/js/jquery-ui-1.10.2.custom.min.js"></script>
+	<script src="knockout-3.2.0.js"></script>
+	<script src="ViewTracker.js"></script>
+
+  </head>
+<body>
+	<div id="fullScreenContainer">
+	
+  		<div id="cesiumContainer"></div>
+  		
+  		<div id="social" class="social-buttons">
+	        <div class="social-button-inline">
+	            <a href="https://twitter.com/share" class="twitter-share-button" data-url="http://cesium.agi.com/powdertracks">Tweet</a>
+	        </div>
+	        <div class="social-button-inline">
+	            <div class="g-plusone" data-size="medium" data-href="http://cesium.agi.com/powdertracks"></div>
+	        </div>
+	        <div class="social-button-inline">
+	            <div class="fb-like" data-href="http://cesium.agi.com/powdertracks" data-send="false" data-layout="button_count" data-show-faces="false"></div>
+	        </div>
+	    </div>
+	    
+		<div id="animationContainer" class="viewTracker-animationContainer"></div>
+		<div id="timelineContainer" class="viewTracker-timelineContainer"></div>
+		<div id="loading" class="viewTracker-loading" ></div>
+	</div>
+</body>
+
+<script>
+    // Social Media Buttons
+    (function (d, s, id) {
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) {
+            return;
+        }
+        js = d.createElement(s);
+        js.id = id;
+        js.src = "http://connect.facebook.net/en_US/all.js#xfbml=1";
+        fjs.parentNode.insertBefore(js, fjs);
+    } (document, 'script', 'facebook-jssdk'));
+
+    (function (d, s, id) {
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (!d.getElementById(id)) {
+            js = d.createElement(s);
+            js.id = id;
+            js.src = "//platform.twitter.com/widgets.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }
+    })(document, "script", "twitter-wjs");
+
+    (function () {
+        var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
+        po.src = 'https://apis.google.com/js/plusone.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
+    })();
+
+</script>
+
+</html>
